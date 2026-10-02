@@ -1,122 +1,71 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React from 'react';
+import { GraduationCap, ShieldCheck, Layers, Sparkles } from 'lucide-react';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-screen bg-[var(--color-surface-bg)] text-[var(--color-text-main)] flex flex-col items-center justify-center p-6">
+      <main className="w-full max-w-2xl bg-[var(--color-surface-card)] border border-[var(--color-surface-border)] rounded-2xl shadow-sm p-8 space-y-6">
+        
+        {/* Header / Brand Badge */}
+        <div className="flex items-center space-x-3">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">CampusFlow</h1>
+            <p className="text-sm text-slate-500">Design Foundation & Token Preview</p>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+        {/* Info Box */}
+        <p className="text-slate-600 text-sm leading-relaxed">
+          Tailwind CSS configured with Vite integration. The palette uses restrained blue primary tones and indigo accents on a clean neutral canvas.
+        </p>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        {/* Color Palette Samples */}
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Color System</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 bg-blue-600 text-white rounded-lg text-center text-xs font-medium">Brand Primary</div>
+            <div className="p-3 bg-indigo-600 text-white rounded-lg text-center text-xs font-medium">Accent Indigo</div>
+            <div className="p-3 bg-slate-100 text-slate-800 rounded-lg text-center text-xs font-medium border border-slate-200">Neutral Light</div>
+            <div className="p-3 bg-slate-900 text-white rounded-lg text-center text-xs font-medium">Neutral Dark</div>
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Button & Element Samples */}
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">UI Controls</span>
+          <div className="flex flex-wrap gap-3">
+            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors shadow-xs">
+              Primary Action
+            </button>
+            <button className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-sm rounded-lg transition-colors">
+              Secondary Accent
+            </button>
+            <button className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-lg transition-colors">
+              Outline Control
+            </button>
+          </div>
+        </div>
+
+        {/* Feature Badges */}
+        <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-4 text-xs text-slate-500">
+          <div className="flex items-center space-x-1.5">
+            <ShieldCheck className="w-4 h-4 text-blue-500" />
+            <span>Accessible Contrast</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <Layers className="w-4 h-4 text-indigo-500" />
+            <span>Modular Tokens</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>Motion Friendly</span>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  );
 }
-
-export default App
