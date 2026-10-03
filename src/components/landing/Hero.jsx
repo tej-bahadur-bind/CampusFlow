@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Play, CheckCircle2, Bell, Clock } from 'lucide-react';
 import Button from '../ui/Button';
+import campusStudentsImg from '../../assets/campus-students.jpg';
 
 export default function Hero() {
   const handleScrollToPreview = (e) => {
@@ -78,7 +79,7 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right Visual: UI Showcase Card */}
+          {/* Right Visual: UI Showcase Card + Campus Context Pill */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -99,7 +100,9 @@ export default function Hero() {
                     <div>
                       <div className="flex items-center space-x-2">
                         <h3 className="text-sm font-semibold text-slate-900">Jane Doe</h3>
-                        <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60 px-1.5 py-0.5 rounded-md">Demo Profile</span>
+                        <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60 px-1.5 py-0.5 rounded-md">
+                          Demo Profile
+                        </span>
                       </div>
                       <p className="text-xs text-slate-500">CS Dept • B.Tech Year 3</p>
                     </div>
@@ -143,7 +146,9 @@ export default function Hero() {
 
                 {/* Mini Visual Chart Bar */}
                 <div className="space-y-2">
-                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Weekly Attendance Trend (Demo)</span>
+                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">
+                    Weekly Attendance Trend (Demo)
+                  </span>
                   <div className="flex items-end justify-between gap-2 h-16 pt-2" aria-label="Sample attendance chart">
                     {[70, 90, 85, 100, 95].map((val, idx) => (
                       <div key={idx} className="flex-1 bg-slate-100 rounded-t-md relative h-full flex items-end">
@@ -158,14 +163,19 @@ export default function Hero() {
 
               </div>
 
-              {/* Floating Notification Badge */}
-              <div className="absolute -bottom-4 -left-4 bg-white border border-slate-200 shadow-md rounded-xl p-3 flex items-center space-x-3 hidden sm:flex">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                  <Bell className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-900">Sample Alert: Results Posted</p>
-                  <p className="text-[11px] text-slate-500">Demo Notification</p>
+              {/* Floating Notification Badge with Local Campus Photo Accent */}
+              <div className="absolute -bottom-4 -left-4 bg-white border border-slate-200/90 shadow-md rounded-xl p-2.5 flex items-center space-x-3 hidden sm:flex">
+                <img
+                  src={campusStudentsImg}
+                  alt="University students collaborating on campus grounds"
+                  className="w-10 h-10 rounded-lg object-cover border border-slate-100"
+                />
+                <div className="pr-2">
+                  <div className="flex items-center space-x-1.5">
+                    <Bell className="w-3.5 h-3.5 text-blue-600" />
+                    <p className="text-xs font-semibold text-slate-900">Student Community Connected</p>
+                  </div>
+                  <p className="text-[11px] text-slate-500">Real-time notice distribution</p>
                 </div>
               </div>
 

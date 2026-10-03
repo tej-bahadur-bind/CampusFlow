@@ -8,6 +8,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import SectionHeading from '../ui/SectionHeading';
+import campusStudentsImg from '../../assets/campus-students.jpg';
 
 export default function FeatureShowcase() {
   return (
@@ -23,23 +24,37 @@ export default function FeatureShowcase() {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* Card 1: Large Featured Card */}
+          {/* Card 1: Featured Card with Local Campus Photo */}
           <motion.div
             whileHover={{ y: -2 }}
             transition={{ duration: 0.2 }}
-            className="md:col-span-2 bg-white rounded-2xl border border-slate-200 p-8 shadow-2xs space-y-4"
+            className="md:col-span-2 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs grid sm:grid-cols-12"
           >
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl w-fit">
-              <UserCheck className="w-6 h-6" />
+            <div className="p-8 sm:col-span-7 flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl w-fit">
+                  <UserCheck className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Student Records Management</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Maintain centralized, secure student profiles containing academic history, department enrollment, contact details, and status tracking in a clean digital format.
+                </p>
+              </div>
+              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
+                <span className="bg-slate-100 px-2.5 py-1 rounded-md">Centralized Database</span>
+                <span className="bg-slate-100 px-2.5 py-1 rounded-md">Profile Histories</span>
+                <span className="bg-slate-100 px-2.5 py-1 rounded-md">Quick Search</span>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Student Records Management</h3>
-            <p className="text-slate-600 text-sm leading-relaxed max-w-xl">
-              Maintain centralized, secure student profiles containing academic history, department enrollment, contact details, and status tracking in a clean digital format.
-            </p>
-            <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
-              <span className="bg-slate-100 px-2.5 py-1 rounded-md">Centralized Database</span>
-              <span className="bg-slate-100 px-2.5 py-1 rounded-md">Profile Histories</span>
-              <span className="bg-slate-100 px-2.5 py-1 rounded-md">Quick Search</span>
+
+            {/* Photo Column */}
+            <div className="sm:col-span-5 relative min-h-[180px] sm:min-h-full">
+              <img
+                src={campusStudentsImg}
+                alt="University students walking and discussing on modern campus grounds"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-white/20 via-transparent to-transparent" />
             </div>
           </motion.div>
 
