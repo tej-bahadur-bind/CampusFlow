@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ShieldCheck, UserCheck, GraduationCap, Check } from 'lucide-react';
 import SectionHeading from '../ui/SectionHeading';
 

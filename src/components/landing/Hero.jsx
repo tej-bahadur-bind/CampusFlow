@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Play, CheckCircle2, Bell, Clock } from 'lucide-react';
 import Button from '../ui/Button';
