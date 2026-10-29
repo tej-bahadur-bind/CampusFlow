@@ -1,14 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowRight, Play, CheckCircle2, Bell, Clock } from 'lucide-react';
 import Button from '../ui/Button';
-import campusStudentsImg from '../../assets/campus-students.jpg';
+import campusStudentsImg from '../../assets/campus-students.webp';
 
 export default function Hero() {
-  const handleScrollToPreview = (e) => {
-    e.preventDefault();
-    const elem = document.querySelector('#preview');
-    if (elem) elem.scrollIntoView({ behavior: 'smooth' });
-  };
+  const navigate = useNavigate();
 
   const handleScrollToHowItWorks = (e) => {
     e.preventDefault();
@@ -44,8 +41,7 @@ export default function Hero() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
               <Button
-                href="#preview"
-                onClick={handleScrollToPreview}
+                onClick={() => navigate('/dashboard')}
                 variant="primary"
                 size="lg"
                 icon={ArrowRight}

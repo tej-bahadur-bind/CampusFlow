@@ -7,7 +7,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import SectionHeading from '../ui/SectionHeading';
-import campusStudentsImg from '../../assets/campus-students.jpg';
+import campusStudentsImg from '../../assets/campus-students.webp';
 
 export default function FeatureShowcase() {
   return (

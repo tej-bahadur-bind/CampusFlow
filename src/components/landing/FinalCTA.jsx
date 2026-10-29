@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
-import campusStudentsImg from '../../assets/campus-students.jpg';
+import campusStudentsImg from '../../assets/campus-students.webp';
 
 export default function FinalCTA() {
   const handleScrollToPreview = (e) => {

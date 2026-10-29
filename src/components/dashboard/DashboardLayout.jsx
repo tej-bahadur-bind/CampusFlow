@@ -9,7 +9,7 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Topbar />
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          <Outlet /> {/* <-- Required for nested routes */}
         </main>
       </div>
     </div>

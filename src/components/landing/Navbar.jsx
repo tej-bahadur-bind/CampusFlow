@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { GraduationCap, Menu, X, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
@@ -6,6 +7,7 @@ import Button from '../ui/Button';
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,6 +33,11 @@ export default function Navbar() {
     }
   };
 
+  const handleAuthNavigation = (path) => {
+    setMobileMenuOpen(false);
+    navigate(path);
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -43,14 +50,18 @@ export default function Navbar() {
         <div className="flex items-center justify-between">
           
           {/* Logo */}
-          <a href="#" className="flex items-center space-x-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg p-1">
+          <Link
+            to="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg p-1"
+          >
             <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs group-hover:bg-blue-700 transition-colors">
               <GraduationCap className="w-5 h-5" />
             </div>
             <span className="text-xl font-bold text-slate-900 tracking-tight">
               Campus<span className="text-blue-600">Flow</span>
             </span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8" aria-label="Main Navigation">
@@ -68,10 +79,20 @@ export default function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center space-x-3">
-            <Button href="#preview" onClick={(e) => handleNavClick(e, '#preview')} variant="ghost" size="sm">
+            <Button
+              onClick={() => handleAuthNavigation('/login')}
+              variant="ghost"
+              size="sm"
+            >
               Login
             </Button>
-            <Button href="#preview" onClick={(e) => handleNavClick(e, '#preview')} variant="primary" size="sm" icon={ArrowRight} iconPosition="right">
+            <Button
+              onClick={() => handleAuthNavigation('/dashboard')}
+              variant="primary"
+              size="sm"
+              icon={ArrowRight}
+              iconPosition="right"
+            >
               Explore Demo
             </Button>
           </div>
@@ -116,10 +137,22 @@ export default function Navbar() {
                 ))}
               </nav>
               <div className="pt-2 flex flex-col space-y-2">
-                <Button href="#preview" onClick={(e) => handleNavClick(e, '#preview')} variant="outline" size="md" className="w-full">
+                <Button
+                  onClick={() => handleAuthNavigation('/login')}
+                  variant="outline"
+                  size="md"
+                  className="w-full"
+                >
                   Login
                 </Button>
-                <Button href="#preview" onClick={(e) => handleNavClick(e, '#preview')} variant="primary" size="md" icon={ArrowRight} iconPosition="right" className="w-full">
+                <Button
+                  onClick={() => handleAuthNavigation('/dashboard')}
+                  variant="primary"
+                  size="md"
+                  icon={ArrowRight}
+                  iconPosition="right"
+                  className="w-full"
+                >
                   Explore Demo
                 </Button>
               </div>

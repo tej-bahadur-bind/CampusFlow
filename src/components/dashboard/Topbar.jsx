@@ -1,77 +1,51 @@
-import { Menu, Search, Bell, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, User,  } from 'lucide-react';
 
-export default function Topbar({ onMobileMenuToggle, activeTitle = 'Overview' }) {
+export default function Topbar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3.5 flex items-center justify-between">
-      
-      {/* Left: Mobile Toggle & Page Title */}
-      <div className="flex items-center space-x-3">
-        <button
-          onClick={onMobileMenuToggle}
-          className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          aria-label="Open navigation sidebar"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
-        <div>
-          <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center space-x-2">
-            <span>{activeTitle}</span>
-          </h1>
-          <p className="text-[11px] text-slate-500 hidden sm:block">
-            CampusFlow Management Workspace
-          </p>
-        </div>
+    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
+      {/* Search / Context Title */}
+      <div className="flex items-center gap-4">
+        <h2 className="text-lg font-semibold text-slate-800">
+          Welcome back, {user?.name || 'User'}
+        </h2>
       </div>
 
-      {/* Right: Search Placeholder, Notifications, Profile, Public Site Link */}
-      <div className="flex items-center space-x-2 sm:space-x-4">
-        
-        {/* Search Input Placeholder */}
-        <div className="relative hidden md:block">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-          <input
-            type="text"
-            disabled
-            placeholder="Search students, courses... (UI placeholder)"
-            className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200/90 rounded-lg text-xs w-64 text-slate-600 placeholder:text-slate-400 cursor-not-allowed focus:outline-none"
-          />
+      {/* Right Controls */}
+      <div className="flex items-center gap-4">
+        {/* Role Badge */}
+        {user?.role && (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 capitalize">
+            {user.role}
+          </span>
+        )}
+
+        {/* User Info */}
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs uppercase">
+            {user?.name ? user.name.charAt(0) : <User size={16} />}
+          </div>
+          <span className="hidden sm:inline-block">{user?.email}</span>
         </div>
 
-        {/* Return to Landing Page Link */}
-        <Link
-          to="/"
-          className="hidden sm:inline-flex items-center space-x-1 text-xs font-semibold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-slate-200/70 px-2.5 py-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          title="View Public Landing Page"
-        >
-          <span>Public Site</span>
-          <ExternalLink className="w-3 h-3" />
-        </Link>
-
-        {/* Notification Icon Button */}
+        {/* Logout Button */}
         <button
-          disabled
-          aria-label="Notifications placeholder"
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 relative cursor-not-allowed focus:outline-none"
+          onClick={handleLogout}
+          title="Sign Out"
+          className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-sm font-medium"
         >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
+          <LogOut size={18} />
+          <span className="hidden md:inline">Logout</span>
         </button>
-
-        <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-
-        {/* Demo User Avatar & Role */}
-        <div className="flex items-center space-x-2.5 pl-1">
-          <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
-            AD
-          </div>
-          <div className="hidden sm:block text-left">
-            <p className="text-xs font-bold text-slate-900 leading-tight">Alex Director</p>
-            <p className="text-[10px] font-medium text-slate-500">Demo Administrator</p>
-          </div>
-        </div>
-
       </div>
     </header>
   );
