@@ -23,12 +23,24 @@ router.post('/register', async (req, res) => {
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+    const normalizedRole = role.toLowerCase();
 
-    // Insert user into PostgreSQL
+    // Insert user into users table
     const newUser = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-      [name, email, hashedPassword, role.toLowerCase()]
+      [name, email, hashedPassword, normalizedRole]
     );
+
+    // Auto-sync student accounts to students roster for analytics tracking
+    if (normalizedRole === 'student') {
+      const generatedRoll = `CS${Math.floor(1000 + Math.random() * 9000)}`;
+      await db.query(
+        `INSERT INTO students (name, email, roll_number, department, year)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (email) DO NOTHING`,
+        [name, email, generatedRoll, 'Computer Science', '1st Year']
+      );
+    }
 
     res.status(201).json({
       message: 'User registered successfully',
