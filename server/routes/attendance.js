@@ -14,18 +14,25 @@ function isValidDate(value) {
   );
 }
 
-// Bulk Save Handler with Role Guard
-const handleBulkSave = async (req, res) => {
-  const userRole = (req.headers['x-user-role'] || req.body.userRole || '').toLowerCase();
+// Authorization middleware for recording attendance
+const requireTeacherOrAdmin = (req, res, next) => {
+  const headerRole = req.headers['x-user-role'];
+  const bodyRole = req.body.userRole;
+  const activeRole = (headerRole || bodyRole || 'student').toLowerCase();
+
   const allowedRoles = ['admin', 'teacher', 'faculty'];
 
-  // Block student role from submitting attendance
-  if (!allowedRoles.includes(userRole)) {
+  if (!allowedRoles.includes(activeRole)) {
     return res.status(403).json({
-      message: 'Access denied. Only Teachers and Admins can record attendance.',
+      message: 'Access Denied: Only Teachers and Administrators can record or modify attendance.',
     });
   }
 
+  next();
+};
+
+// Bulk Save Handler
+const handleBulkSave = async (req, res) => {
   const { date, records } = req.body;
 
   if (!isValidDate(date)) {
@@ -36,7 +43,7 @@ const handleBulkSave = async (req, res) => {
 
   if (!Array.isArray(records) || records.length === 0 || records.length > 1000) {
     return res.status(400).json({
-      message: 'Records must be a non-empty array of up to 1000 students.',
+      message: 'Records must be a non-empty array of student entries.',
     });
   }
 
@@ -53,7 +60,7 @@ const handleBulkSave = async (req, res) => {
       (record?.remarks != null && typeof record.remarks !== 'string')
     ) {
       return res.status(400).json({
-        message: 'Each record needs a unique positive student_id, a valid status, and optional text remarks.',
+        message: 'Invalid record entry detected. Ensure status and student IDs are valid.',
       });
     }
 
@@ -158,7 +165,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/bulk', handleBulkSave);
-router.post('/', handleBulkSave);
+// Protect all write endpoints with authorization middleware
+router.post('/bulk', requireTeacherOrAdmin, handleBulkSave);
+router.post('/', requireTeacherOrAdmin, handleBulkSave);
 
 export default router;

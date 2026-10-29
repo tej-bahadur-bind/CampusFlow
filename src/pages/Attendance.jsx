@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, CheckCircle2, Save, Users, ShieldAlert } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Save, Users, ShieldAlert, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 
@@ -20,7 +20,9 @@ function getLocalDate() {
 
 export default function Attendance() {
   const { user } = useAuth();
-  const rawRole = user?.role || 'Student';
+  
+  // Default strictly to 'student' to avoid granting temporary admin rights on initial render
+  const rawRole = user?.role || 'student';
   const normalizedRole = rawRole.toLowerCase();
 
   const isManagementRole = ['admin', 'teacher', 'faculty'].includes(normalizedRole);
@@ -43,7 +45,7 @@ export default function Attendance() {
         ]);
 
         if (!studentsResponse.ok || !attendanceResponse.ok) {
-          throw new Error('Could not load students or attendance. Check your backend.');
+          throw new Error('Could not load students or attendance data.');
         }
 
         const studentData = await studentsResponse.json();
@@ -73,7 +75,7 @@ export default function Attendance() {
         if (err.name !== 'AbortError') {
           setError(
             err.message === 'Failed to fetch'
-              ? 'Cannot connect to backend server. Render may be spinning up (wait ~30s).'
+              ? 'Cannot connect to backend server. Render may be spinning up.'
               : err.message || 'Failed to load attendance.'
           );
         }
@@ -112,7 +114,7 @@ export default function Attendance() {
 
   async function saveAttendance() {
     if (!isManagementRole) {
-      setError('Access denied. Only Teachers and Admins can record attendance.');
+      setError('Access Denied: Only Teachers and Admins can record attendance.');
       return;
     }
 
@@ -201,10 +203,13 @@ export default function Attendance() {
           </label>
         </header>
 
+        {/* Read-Only Warning Banner for Student Accounts */}
         {!isManagementRole && (
-          <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900 shadow-xs">
             <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600" />
-            <span>Read-Only Mode: You are logged in as a Student. Only Teachers and Admins can record attendance.</span>
+            <span>
+              <strong>Read-Only Access:</strong> You are logged in as a Student. Only Teachers and Administrators can record or modify attendance.
+            </span>
           </div>
         )}
 
@@ -239,7 +244,7 @@ export default function Attendance() {
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-blue-600" />
               <h2 className="text-lg font-semibold text-slate-900">
-                Student checklist
+                Student Checklist
               </h2>
             </div>
             <p className="text-sm text-slate-500">
@@ -265,42 +270,70 @@ export default function Attendance() {
                       </p>
                     </div>
 
+                    {/* Interactive buttons for Admins/Teachers OR Read-Only Badges for Students */}
                     <div className="flex flex-wrap gap-2">
-                      {STATUS_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          disabled={!isManagementRole}
-                          aria-pressed={student.status === option.value}
-                          onClick={() =>
-                            updateStudent(student.id, { status: option.value })
-                          }
-                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                            !isManagementRole ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
-                          } ${
-                            student.status === option.value
-                              ? `${option.selected} border-transparent`
-                              : `bg-white ${option.idle}`
-                          }`}
-                        >
-                          {option.value}
-                        </button>
-                      ))}
+                      {isManagementRole ? (
+                        STATUS_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={student.status === option.value}
+                            onClick={() =>
+                              updateStudent(student.id, { status: option.value })
+                            }
+                            className={`rounded-lg border px-3 py-2 text-sm font-semibold transition cursor-pointer ${
+                              student.status === option.value
+                                ? `${option.selected} border-transparent`
+                                : `bg-white ${option.idle}`
+                            }`}
+                          >
+                            {option.value}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {student.status ? (
+                            <span
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                                student.status === 'Present'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : student.status === 'Absent'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {student.status}
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-500">
+                              Unmarked
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <input
-                    type="text"
-                    disabled={!isManagementRole}
-                    value={student.remarks}
-                    onChange={(event) =>
-                      updateStudent(student.id, { remarks: event.target.value })
-                    }
-                    maxLength={2000}
-                    placeholder={isManagementRole ? "Optional remarks..." : "No remarks provided"}
-                    aria-label={`Remarks for ${student.name}`}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
-                  />
+                  {/* Editable remarks for Staff vs Read-only text for Students */}
+                  {isManagementRole ? (
+                    <input
+                      type="text"
+                      value={student.remarks}
+                      onChange={(event) =>
+                        updateStudent(student.id, { remarks: event.target.value })
+                      }
+                      maxLength={2000}
+                      placeholder="Optional remarks..."
+                      aria-label={`Remarks for ${student.name}`}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  ) : (
+                    student.remarks && (
+                      <p className="text-xs italic text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        Remarks: {student.remarks}
+                      </p>
+                    )
+                  )}
                 </article>
               ))}
             </div>
@@ -310,9 +343,11 @@ export default function Attendance() {
             <p className="text-sm text-slate-500">
               {isManagementRole
                 ? 'Select a status for each student before saving.'
-                : 'Attendance records are managed by teachers and administrators.'}
+                : 'Attendance records are read-only for students.'}
             </p>
-            {isManagementRole && (
+
+            {/* Save button ONLY rendered for management roles */}
+            {isManagementRole ? (
               <button
                 type="button"
                 onClick={saveAttendance}
@@ -329,6 +364,11 @@ export default function Attendance() {
                   </>
                 )}
               </button>
+            ) : (
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 bg-slate-200/60 px-4 py-2.5 rounded-xl">
+                <Lock className="w-3.5 h-3.5" />
+                <span>Editing Disabled</span>
+              </div>
             )}
           </div>
         </section>
