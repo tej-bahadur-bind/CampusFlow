@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, CheckCircle2, Save, Users } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Save, Users, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 
 const STATUS_OPTIONS = [
@@ -18,6 +19,12 @@ function getLocalDate() {
 }
 
 export default function Attendance() {
+  const { user } = useAuth();
+  const rawRole = user?.role || 'Student';
+  const normalizedRole = rawRole.toLowerCase();
+
+  const isManagementRole = ['admin', 'teacher', 'faculty'].includes(normalizedRole);
+
   const [date, setDate] = useState(getLocalDate);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +97,8 @@ export default function Attendance() {
   }
 
   function updateStudent(studentId, changes) {
+    if (!isManagementRole) return;
+
     setStudents((current) =>
       current.map((student) =>
         student.id === studentId
@@ -102,6 +111,11 @@ export default function Attendance() {
   }
 
   async function saveAttendance() {
+    if (!isManagementRole) {
+      setError('Access denied. Only Teachers and Admins can record attendance.');
+      return;
+    }
+
     if (students.length === 0) {
       setError('There are no students to save.');
       return;
@@ -121,9 +135,13 @@ export default function Attendance() {
     try {
       const response = await fetch(`${API_BASE_URL}/attendance`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': rawRole,
+        },
         body: JSON.stringify({
           date,
+          userRole: rawRole,
           records: students.map((student) => ({
             student_id: student.id,
             status: student.status,
@@ -182,6 +200,13 @@ export default function Attendance() {
             />
           </label>
         </header>
+
+        {!isManagementRole && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+            <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600" />
+            <span>Read-Only Mode: You are logged in as a Student. Only Teachers and Admins can record attendance.</span>
+          </div>
+        )}
 
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
@@ -245,11 +270,14 @@ export default function Attendance() {
                         <button
                           key={option.value}
                           type="button"
+                          disabled={!isManagementRole}
                           aria-pressed={student.status === option.value}
                           onClick={() =>
                             updateStudent(student.id, { status: option.value })
                           }
-                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition cursor-pointer ${
+                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                            !isManagementRole ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+                          } ${
                             student.status === option.value
                               ? `${option.selected} border-transparent`
                               : `bg-white ${option.idle}`
@@ -263,14 +291,15 @@ export default function Attendance() {
 
                   <input
                     type="text"
+                    disabled={!isManagementRole}
                     value={student.remarks}
                     onChange={(event) =>
                       updateStudent(student.id, { remarks: event.target.value })
                     }
                     maxLength={2000}
-                    placeholder="Optional remarks..."
+                    placeholder={isManagementRole ? "Optional remarks..." : "No remarks provided"}
                     aria-label={`Remarks for ${student.name}`}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                   />
                 </article>
               ))}
@@ -279,24 +308,28 @@ export default function Attendance() {
 
           <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <p className="text-sm text-slate-500">
-              Select a status for each student before saving.
+              {isManagementRole
+                ? 'Select a status for each student before saving.'
+                : 'Attendance records are managed by teachers and administrators.'}
             </p>
-            <button
-              type="button"
-              onClick={saveAttendance}
-              disabled={loading || saving || students.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-            >
-              {saving ? (
-                'Saving...'
-              ) : (
-                <>
-                  <Save className="h-5 w-5" />
-                  Save Attendance
-                  <CheckCircle2 className="h-5 w-5" />
-                </>
-              )}
-            </button>
+            {isManagementRole && (
+              <button
+                type="button"
+                onClick={saveAttendance}
+                disabled={loading || saving || students.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              >
+                {saving ? (
+                  'Saving...'
+                ) : (
+                  <>
+                    <Save className="h-5 w-5" />
+                    Save Attendance
+                    <CheckCircle2 className="h-5 w-5" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </section>
       </div>

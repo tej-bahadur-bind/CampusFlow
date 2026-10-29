@@ -14,8 +14,18 @@ function isValidDate(value) {
   );
 }
 
-// Handler for bulk saving attendance records
+// Bulk Save Handler with Role Guard
 const handleBulkSave = async (req, res) => {
+  const userRole = (req.headers['x-user-role'] || req.body.userRole || '').toLowerCase();
+  const allowedRoles = ['admin', 'teacher', 'faculty'];
+
+  // Block student role from submitting attendance
+  if (!allowedRoles.includes(userRole)) {
+    return res.status(403).json({
+      message: 'Access denied. Only Teachers and Admins can record attendance.',
+    });
+  }
+
   const { date, records } = req.body;
 
   if (!isValidDate(date)) {
@@ -24,11 +34,7 @@ const handleBulkSave = async (req, res) => {
     });
   }
 
-  if (
-    !Array.isArray(records) ||
-    records.length === 0 ||
-    records.length > 1000
-  ) {
+  if (!Array.isArray(records) || records.length === 0 || records.length > 1000) {
     return res.status(400).json({
       message: 'Records must be a non-empty array of up to 1000 students.',
     });
@@ -47,14 +53,7 @@ const handleBulkSave = async (req, res) => {
       (record?.remarks != null && typeof record.remarks !== 'string')
     ) {
       return res.status(400).json({
-        message:
-          'Each record needs a unique positive student_id, a valid status, and optional text remarks.',
-      });
-    }
-
-    if (typeof record.remarks === 'string' && record.remarks.length > 2000) {
-      return res.status(400).json({
-        message: 'Remarks cannot exceed 2000 characters.',
+        message: 'Each record needs a unique positive student_id, a valid status, and optional text remarks.',
       });
     }
 
@@ -68,19 +67,13 @@ const handleBulkSave = async (req, res) => {
 
     for (const record of records) {
       await client.query(
-        `INSERT INTO attendance
-           (student_id, date, status, remarks)
+        `INSERT INTO attendance (student_id, date, status, remarks)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (student_id, date)
          DO UPDATE SET
            status = EXCLUDED.status,
            remarks = EXCLUDED.remarks`,
-        [
-          record.student_id,
-          date,
-          record.status,
-          record.remarks?.trim() || null,
-        ]
+        [record.student_id, date, record.status, record.remarks?.trim() || null]
       );
     }
 
@@ -94,16 +87,7 @@ const handleBulkSave = async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Save attendance error:', error);
-
-    if (error.code === '23503') {
-      return res.status(400).json({
-        message: 'One or more student IDs do not exist.',
-      });
-    }
-
-    return res.status(500).json({
-      message: 'Unable to save attendance.',
-    });
+    return res.status(500).json({ message: 'Unable to save attendance.' });
   } finally {
     client.release();
   }
@@ -154,21 +138,12 @@ router.get('/', async (req, res) => {
   const { date } = req.query;
 
   if (!isValidDate(date)) {
-    return res.status(400).json({
-      message: 'Provide a valid date in YYYY-MM-DD format.',
-    });
+    return res.status(400).json({ message: 'Provide a valid date in YYYY-MM-DD format.' });
   }
 
   try {
     const result = await db.query(
-      `SELECT
-         a.id,
-         a.student_id,
-         a.date,
-         a.status,
-         a.remarks,
-         s.name,
-         s.roll_number
+      `SELECT a.id, a.student_id, a.date, a.status, a.remarks, s.name, s.roll_number
        FROM attendance a
        JOIN students s ON s.id = a.student_id
        WHERE a.date = $1
@@ -179,13 +154,10 @@ router.get('/', async (req, res) => {
     return res.json(result.rows);
   } catch (error) {
     console.error('Fetch attendance error:', error);
-    return res.status(500).json({
-      message: 'Unable to fetch attendance.',
-    });
+    return res.status(500).json({ message: 'Unable to fetch attendance.' });
   }
 });
 
-// POST /api/attendance AND POST /api/attendance/bulk
 router.post('/bulk', handleBulkSave);
 router.post('/', handleBulkSave);
 
