@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CalendarDays, CheckCircle2, Save, Users } from 'lucide-react';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config';
 
 const STATUS_OPTIONS = [
   { value: 'Present', selected: 'bg-emerald-600 text-white', idle: 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' },
@@ -32,8 +31,8 @@ export default function Attendance() {
     async function fetchAttendanceData() {
       try {
         const [studentsResponse, attendanceResponse] = await Promise.all([
-          fetch(`${API_URL}/students`, { signal: controller.signal }),
-          fetch(`${API_URL}/attendance?date=${date}`, { signal: controller.signal }),
+          fetch(`${API_BASE_URL}/students`, { signal: controller.signal }),
+          fetch(`${API_BASE_URL}/attendance?date=${date}`, { signal: controller.signal }),
         ]);
 
         if (!studentsResponse.ok || !attendanceResponse.ok) {
@@ -65,7 +64,11 @@ export default function Attendance() {
         );
       } catch (err) {
         if (err.name !== 'AbortError') {
-          setError(err.message || 'Failed to load attendance.');
+          setError(
+            err.message === 'Failed to fetch'
+              ? 'Cannot connect to backend server. Render may be spinning up (wait ~30s).'
+              : err.message || 'Failed to load attendance.'
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -116,7 +119,7 @@ export default function Attendance() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_URL}/attendance/bulk`, {
+      const response = await fetch(`${API_BASE_URL}/attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +127,7 @@ export default function Attendance() {
           records: students.map((student) => ({
             student_id: student.id,
             status: student.status,
-            remarks: student.remarks.trim() || null,
+            remarks: student.remarks ? student.remarks.trim() : null,
           })),
         }),
       });
@@ -135,7 +138,7 @@ export default function Attendance() {
         throw new Error(result.message || 'Could not save attendance.');
       }
 
-      setMessage(`Attendance saved for ${result.saved} students.`);
+      setMessage(`Attendance saved successfully for ${result.saved || students.length} students.`);
     } catch (err) {
       setError(err.message || 'Failed to save attendance.');
     } finally {
@@ -246,7 +249,7 @@ export default function Attendance() {
                           onClick={() =>
                             updateStudent(student.id, { status: option.value })
                           }
-                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition cursor-pointer ${
                             student.status === option.value
                               ? `${option.selected} border-transparent`
                               : `bg-white ${option.idle}`
@@ -282,7 +285,7 @@ export default function Attendance() {
               type="button"
               onClick={saveAttendance}
               disabled={loading || saving || students.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               {saving ? (
                 'Saving...'

@@ -14,6 +14,101 @@ function isValidDate(value) {
   );
 }
 
+// Handler for bulk saving attendance records
+const handleBulkSave = async (req, res) => {
+  const { date, records } = req.body;
+
+  if (!isValidDate(date)) {
+    return res.status(400).json({
+      message: 'Provide a valid date in YYYY-MM-DD format.',
+    });
+  }
+
+  if (
+    !Array.isArray(records) ||
+    records.length === 0 ||
+    records.length > 1000
+  ) {
+    return res.status(400).json({
+      message: 'Records must be a non-empty array of up to 1000 students.',
+    });
+  }
+
+  const seenIds = new Set();
+
+  for (const record of records) {
+    const id = record?.student_id;
+
+    if (
+      !Number.isSafeInteger(id) ||
+      id <= 0 ||
+      seenIds.has(id) ||
+      !VALID_STATUSES.has(record?.status) ||
+      (record?.remarks != null && typeof record.remarks !== 'string')
+    ) {
+      return res.status(400).json({
+        message:
+          'Each record needs a unique positive student_id, a valid status, and optional text remarks.',
+      });
+    }
+
+    if (typeof record.remarks === 'string' && record.remarks.length > 2000) {
+      return res.status(400).json({
+        message: 'Remarks cannot exceed 2000 characters.',
+      });
+    }
+
+    seenIds.add(id);
+  }
+
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    for (const record of records) {
+      await client.query(
+        `INSERT INTO attendance
+           (student_id, date, status, remarks)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (student_id, date)
+         DO UPDATE SET
+           status = EXCLUDED.status,
+           remarks = EXCLUDED.remarks`,
+        [
+          record.student_id,
+          date,
+          record.status,
+          record.remarks?.trim() || null,
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    return res.json({
+      message: 'Attendance saved successfully.',
+      saved: records.length,
+      date,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Save attendance error:', error);
+
+    if (error.code === '23503') {
+      return res.status(400).json({
+        message: 'One or more student IDs do not exist.',
+      });
+    }
+
+    return res.status(500).json({
+      message: 'Unable to save attendance.',
+    });
+  } finally {
+    client.release();
+  }
+};
+
 // GET /api/attendance/summary
 router.get('/summary', async (req, res) => {
   try {
@@ -90,100 +185,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/attendance/bulk
-router.post('/bulk', async (req, res) => {
-  const { date, records } = req.body;
-
-  if (!isValidDate(date)) {
-    return res.status(400).json({
-      message: 'Provide a valid date in YYYY-MM-DD format.',
-    });
-  }
-
-  if (
-    !Array.isArray(records) ||
-    records.length === 0 ||
-    records.length > 1000
-  ) {
-    return res.status(400).json({
-      message: 'Records must be a non-empty array of up to 1000 students.',
-    });
-  }
-
-  const seenIds = new Set();
-
-  for (const record of records) {
-    const id = record?.student_id;
-
-    if (
-      !Number.isSafeInteger(id) ||
-      id <= 0 ||
-      seenIds.has(id) ||
-      !VALID_STATUSES.has(record?.status) ||
-      (record?.remarks != null && typeof record.remarks !== 'string')
-    ) {
-      return res.status(400).json({
-        message:
-          'Each record needs a unique positive student_id, a valid status, and optional text remarks.',
-      });
-    }
-
-    if (typeof record.remarks === 'string' && record.remarks.length > 2000) {
-      return res.status(400).json({
-        message: 'Remarks cannot exceed 2000 characters.',
-      });
-    }
-
-    seenIds.add(id);
-  }
-
-  const client = await db.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    for (const record of records) {
-      await client.query(
-        `INSERT INTO attendance
-           (student_id, date, status, remarks)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (student_id, date)
-         DO UPDATE SET
-           status = EXCLUDED.status,
-           remarks = EXCLUDED.remarks,
-           updated_at = NOW()`,
-        [
-          record.student_id,
-          date,
-          record.status,
-          record.remarks?.trim() || null,
-        ]
-      );
-    }
-
-    await client.query('COMMIT');
-
-    return res.json({
-      message: 'Attendance saved successfully.',
-      saved: records.length,
-      date,
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Save attendance error:', error);
-
-    if (error.code === '23503') {
-      return res.status(400).json({
-        message: 'One or more student IDs do not exist.',
-      });
-    }
-
-    return res.status(500).json({
-      message: 'Unable to save attendance.',
-    });
-  } finally {
-    client.release();
-  }
-});
+// POST /api/attendance AND POST /api/attendance/bulk
+router.post('/bulk', handleBulkSave);
+router.post('/', handleBulkSave);
 
 export default router;
