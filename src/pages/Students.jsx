@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react';
 import { UserPlus, Search, Trash2, Edit, X, RefreshCw, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { exportToCSV } from '../utils/csvExport';
+import { API_BASE_URL } from '../config';
 
-const API_URL = 'http://localhost:5000/api/students';
+const API_URL = `${API_BASE_URL}/students`;
 const ITEMS_PER_PAGE = 5;
 
 export default function Students() {
   const { user } = useAuth();
-  const userRole = user?.role || 'Admin';
+  const rawRole = user?.role || 'Admin';
+  const normalizedRole = rawRole.toLowerCase();
+
+  const isManagementRole = ['admin', 'teacher', 'faculty'].includes(normalizedRole);
+  const isAdmin = normalizedRole === 'admin';
 
   const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,11 +82,11 @@ export default function Students() {
   const openEditModal = (student) => {
     setEditingStudent(student);
     setFormData({
-      roll_number: student.roll_number,
-      name: student.name,
-      email: student.email,
-      department: student.department,
-      year: String(student.year),
+      roll_number: student.roll_number || '',
+      name: student.name || '',
+      email: student.email || '',
+      department: student.department || 'Computer Science',
+      year: String(student.year || '1'),
       status: student.status || 'Active',
     });
     setFormError('');
@@ -101,9 +106,9 @@ export default function Students() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-role': userRole,
+          'x-user-role': rawRole,
         },
-        body: JSON.stringify({ ...formData, year: parseInt(formData.year, 10), userRole }),
+        body: JSON.stringify({ ...formData, year: parseInt(formData.year, 10), userRole: rawRole }),
       });
 
       const data = await res.json();
@@ -121,7 +126,7 @@ export default function Students() {
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
-        headers: { 'x-user-role': userRole },
+        headers: { 'x-user-role': rawRole },
       });
       if (res.ok) fetchStudents();
       else {
@@ -148,8 +153,8 @@ export default function Students() {
   // Filter Logic
   const filteredStudents = students.filter((s) => {
     const matchesSearch =
-      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.roll_number.toLowerCase().includes(searchTerm.toLowerCase());
+      (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.roll_number || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDept = selectedDept === 'All' || s.department === selectedDept;
     return matchesSearch && matchesDept;
   });
@@ -170,15 +175,15 @@ export default function Students() {
         <div className="flex items-center space-x-3">
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center space-x-2 bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+            className="inline-flex items-center space-x-2 bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl font-medium hover:bg-slate-200 transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Export CSV</span>
           </button>
-          {['Admin', 'Teacher'].includes(userRole) && (
+          {isManagementRole && (
             <button
               onClick={openAddModal}
-              className="inline-flex items-center space-x-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center space-x-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               <span>Add New Student</span>
@@ -210,7 +215,7 @@ export default function Students() {
               setSelectedDept(e.target.value);
               setCurrentPage(1);
             }}
-            className="p-2 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+            className="p-2 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-white cursor-pointer"
           >
             <option value="All">All Departments</option>
             <option value="Computer Science">Computer Science</option>
@@ -219,7 +224,7 @@ export default function Students() {
             <option value="Civil">Civil</option>
           </select>
 
-          <button onClick={fetchStudents} className="p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100">
+          <button onClick={fetchStudents} className="p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 cursor-pointer">
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
@@ -241,34 +246,34 @@ export default function Students() {
                 <th className="p-4">Department</th>
                 <th className="p-4">Year</th>
                 <th className="p-4">Status</th>
-                {['Admin', 'Teacher'].includes(userRole) && <th className="p-4 text-right">Actions</th>}
+                {isManagementRole && <th className="p-4 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {paginatedStudents.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="p-4 font-semibold text-slate-900">{s.roll_number}</td>
+                  <td className="p-4 font-semibold text-slate-900">{s.roll_number || 'N/A'}</td>
                   <td className="p-4 font-medium text-slate-800">{s.name}</td>
                   <td className="p-4 text-slate-500">{s.email}</td>
-                  <td className="p-4 text-slate-600">{s.department}</td>
-                  <td className="p-4 text-slate-600">Year {s.year}</td>
+                  <td className="p-4 text-slate-600">{s.department || 'Computer Science'}</td>
+                  <td className="p-4 text-slate-600">Year {s.year || 1}</td>
                   <td className="p-4">
                     <span className="px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
                       {s.status || 'Active'}
                     </span>
                   </td>
-                  {['Admin', 'Teacher'].includes(userRole) && (
+                  {isManagementRole && (
                     <td className="p-4 text-right space-x-2">
                       <button
                         onClick={() => openEditModal(s)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      {userRole === 'Admin' && (
+                      {isAdmin && (
                         <button
                           onClick={() => handleDelete(s.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -284,13 +289,13 @@ export default function Students() {
         {/* Pagination Footer */}
         <div className="flex items-center justify-between p-4 border-t border-slate-100 text-xs text-slate-500">
           <span>
-            Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredStudents.length)} of {filteredStudents.length} entries
+            Showing {filteredStudents.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredStudents.length)} of {filteredStudents.length} entries
           </span>
           <div className="flex items-center space-x-2">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
-              className="p-1.5 border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100"
+              className="p-1.5 border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -300,7 +305,7 @@ export default function Students() {
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
-              className="p-1.5 border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100"
+              className="p-1.5 border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -316,7 +321,7 @@ export default function Students() {
               <h2 className="text-lg font-bold text-slate-900">
                 {editingStudent ? 'Edit Student Details' : 'Add New Student'}
               </h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600">
+              <button onClick={() => setModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -365,12 +370,12 @@ export default function Students() {
                   <select
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-white"
                   >
-                    <option>Computer Science</option>
-                    <option>Electronics</option>
-                    <option>Mechanical</option>
-                    <option>Civil</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Mechanical">Mechanical</option>
+                    <option value="Civil">Civil</option>
                   </select>
                 </div>
 
@@ -379,7 +384,7 @@ export default function Students() {
                   <select
                     value={formData.year}
                     onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-white"
                   >
                     <option value="1">1st Year</option>
                     <option value="2">2nd Year</option>
@@ -393,13 +398,13 @@ export default function Students() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium bg-slate-900 text-white rounded-xl hover:bg-slate-800"
+                  className="px-4 py-2 text-sm font-medium bg-slate-900 text-white rounded-xl hover:bg-slate-800 cursor-pointer"
                 >
                   {editingStudent ? 'Update Student' : 'Save Student'}
                 </button>
