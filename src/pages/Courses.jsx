@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, BookOpen, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config';
 
@@ -14,6 +14,7 @@ export default function Courses() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [formError, setFormError] = useState('');
+  const [actionLoading, setActionLoading] = useState(null);
 
   const [formData, setFormData] = useState({
     course_code: '',
@@ -22,10 +23,11 @@ export default function Courses() {
     credits: '3',
   });
 
-  // Helper function to re-fetch data after user actions (submit / delete)
+  // Helper function to re-fetch data after user actions (submit / delete / enroll)
   const reloadCourses = async () => {
     try {
-      const res = await fetch(API_URL);
+      const url = user?.id ? `${API_URL}?userId=${user.id}` : API_URL;
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
         setCourses(Array.isArray(data) ? data : []);
@@ -41,7 +43,8 @@ export default function Courses() {
 
     async function fetchInitialData() {
       try {
-        const res = await fetch(API_URL);
+        const url = user?.id ? `${API_URL}?userId=${user.id}` : API_URL;
+        const res = await fetch(url);
         const data = await res.json();
         if (!ignore && res.ok) {
           setCourses(Array.isArray(data) ? data : []);
@@ -60,7 +63,30 @@ export default function Courses() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [user?.id]);
+
+  // Handler for student course enrollment/unenrollment toggle
+  const handleEnrollToggle = async (courseId, currentlyEnrolled) => {
+    if (!user?.id) return;
+    setActionLoading(courseId);
+
+    const endpoint = currentlyEnrolled ? `${API_URL}/unenroll` : `${API_URL}/enroll`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, courseId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update course selection');
+      await reloadCourses();
+    } catch (err) {
+      alert(err.message || 'Could not update course selection');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,7 +161,9 @@ export default function Courses() {
           <p className="col-span-full text-center py-8 text-slate-500">No courses listed yet.</p>
         ) : (
           courses.map((c) => (
-            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+            <div key={c.id} className={`p-5 rounded-2xl border transition-all bg-white flex flex-col justify-between space-y-4 ${
+              c.is_enrolled ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200 shadow-sm'
+            }`}>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md">
@@ -146,6 +174,34 @@ export default function Courses() {
                 <h3 className="font-bold text-slate-900 text-base">{c.title}</h3>
                 <p className="text-xs text-slate-500">{c.department}</p>
               </div>
+
+              {/* Student Course Selection Toggle */}
+              {normalizedRole === 'student' && (
+                <button
+                  type="button"
+                  disabled={actionLoading === c.id}
+                  onClick={() => handleEnrollToggle(c.id, c.is_enrolled)}
+                  className={`w-full py-2 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    c.is_enrolled
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                      : 'bg-slate-900 text-white hover:bg-slate-800'
+                  }`}
+                >
+                  {actionLoading === c.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : c.is_enrolled ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      <span>Enrolled (Click to Unenroll)</span>
+                    </>
+                  ) : (
+                    <>
+                      <BookOpen className="w-4 h-4" />
+                      <span>Choose / Enroll Course</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               {canDeleteCourse && (
                 <div className="pt-3 border-t border-slate-100 flex justify-end">
