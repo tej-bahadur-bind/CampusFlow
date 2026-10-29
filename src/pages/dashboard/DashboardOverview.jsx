@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, CheckCircle, Clock, AlertTriangle, ArrowRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function DashboardOverview() {
   const [summary, setSummary] = useState({
@@ -16,10 +17,16 @@ export default function DashboardOverview() {
     let isMounted = true;
     async function fetchSummary() {
       try {
-        const res = await fetch('http://localhost:5000/api/attendance/summary');
+        const res = await fetch(`${API_BASE_URL}/attendance/summary`);
         if (res.ok && isMounted) {
           const data = await res.json();
-          setSummary(data);
+          setSummary({
+            totalStudents: data.totalStudents || data.totalEnrolled || 0,
+            attendanceRate: data.attendanceRate || 0,
+            present: data.present || 0,
+            absent: data.absent || 0,
+            late: data.late || 0,
+          });
         }
       } catch (err) {
         console.error('Failed to load dashboard summary:', err);
