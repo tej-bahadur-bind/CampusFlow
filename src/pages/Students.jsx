@@ -150,12 +150,21 @@ export default function Students() {
     exportToCSV('Students_Directory', headers, filteredStudents);
   };
 
-  // Filter Logic
+  // Robust Case-Insensitive Filter Logic
   const filteredStudents = students.filter((s) => {
-    const matchesSearch =
-      (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.roll_number || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = selectedDept === 'All' || s.department === selectedDept;
+    const nameMatch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const rollMatch = (s.roll_number || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const emailMatch = (s.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = nameMatch || rollMatch || emailMatch;
+
+    const studentDept = (s.department || 'Computer Science').trim().toLowerCase();
+    const targetDept = selectedDept.trim().toLowerCase();
+
+    const matchesDept =
+      selectedDept === 'All' ||
+      selectedDept === 'All Departments' ||
+      studentDept === targetDept;
+
     return matchesSearch && matchesDept;
   });
 
