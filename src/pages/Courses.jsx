@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
-const API_URL = 'http://localhost:5000/api/courses';
+const API_URL = `${API_BASE_URL}/courses`;
 
 export default function Courses() {
   const { user } = useAuth();
   const userRole = user?.role || 'Admin';
+  const normalizedRole = userRole.toLowerCase();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,35 +22,43 @@ export default function Courses() {
     credits: '3',
   });
 
-  const fetchCourses = async () => {
-    setLoading(true);
+  // Helper function to re-fetch data after user actions (submit / delete)
+  const reloadCourses = async () => {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      if (res.ok) setCourses(data);
+      if (res.ok) {
+        setCourses(Array.isArray(data) ? data : []);
+      }
     } catch (err) {
       console.error('Failed to fetch courses:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
+  // Safe initial data fetching inside useEffect with cancellation check
   useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
+    let ignore = false;
+
+    async function fetchInitialData() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        if (res.ok && isMounted) setCourses(data);
+        if (!ignore && res.ok) {
+          setCourses(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch courses:', err);
       } finally {
-        if (isMounted) setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
-    loadData();
+
+    fetchInitialData();
+
     return () => {
-      isMounted = false;
+      ignore = true;
     };
   }, []);
 
@@ -63,14 +73,18 @@ export default function Courses() {
           'Content-Type': 'application/json',
           'x-user-role': userRole,
         },
-        body: JSON.stringify({ ...formData, credits: parseInt(formData.credits, 10), userRole }),
+        body: JSON.stringify({
+          ...formData,
+          credits: parseInt(formData.credits, 10),
+          userRole,
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add course');
 
       setModalOpen(false);
-      fetchCourses();
+      await reloadCourses();
     } catch (err) {
       setFormError(err.message);
     }
@@ -83,11 +97,14 @@ export default function Courses() {
         method: 'DELETE',
         headers: { 'x-user-role': userRole },
       });
-      if (res.ok) fetchCourses();
+      if (res.ok) await reloadCourses();
     } catch (err) {
       console.error(err);
     }
   };
+
+  const canAddCourse = ['admin', 'teacher', 'faculty'].includes(normalizedRole);
+  const canDeleteCourse = ['admin'].includes(normalizedRole);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -96,14 +113,14 @@ export default function Courses() {
           <h1 className="text-2xl font-bold text-slate-900">Course & Subject Catalog</h1>
           <p className="text-sm text-slate-500">Manage academic subjects, course codes, and department credits</p>
         </div>
-        {['Admin', 'Teacher'].includes(userRole) && (
+        {canAddCourse && (
           <button
             onClick={() => {
               setFormData({ course_code: '', title: '', department: 'Computer Science', credits: '3' });
               setFormError('');
               setModalOpen(true);
             }}
-            className="inline-flex items-center space-x-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-slate-800"
+            className="inline-flex items-center space-x-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-colors cursor-pointer text-sm"
           >
             <Plus className="w-4 h-4" />
             <span>Add New Course</span>
@@ -118,7 +135,7 @@ export default function Courses() {
           <p className="col-span-full text-center py-8 text-slate-500">No courses listed yet.</p>
         ) : (
           courses.map((c) => (
-            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md">
@@ -130,9 +147,9 @@ export default function Courses() {
                 <p className="text-xs text-slate-500">{c.department}</p>
               </div>
 
-              {userRole === 'Admin' && (
+              {canDeleteCourse && (
                 <div className="pt-3 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => handleDelete(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                  <button onClick={() => handleDelete(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -143,12 +160,12 @@ export default function Courses() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="text-lg font-bold text-slate-900">Add Course</h2>
-              <button onClick={() => setModalOpen(false)}>
-                <X className="w-5 h-5 text-slate-400" />
+              <button onClick={() => setModalOpen(false)} className="cursor-pointer">
+                <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
               </button>
             </div>
             {formError && <div className="p-3 text-xs bg-red-50 text-red-600 rounded-xl">{formError}</div>}
@@ -161,7 +178,7 @@ export default function Courses() {
                   placeholder="e.g. CS301"
                   value={formData.course_code}
                   onChange={(e) => setFormData({ ...formData, course_code: e.target.value })}
-                  className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                  className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-slate-900"
                 />
               </div>
               <div>
@@ -172,7 +189,7 @@ export default function Courses() {
                   placeholder="e.g. Database Management Systems"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                  className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-slate-900"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -181,7 +198,7 @@ export default function Courses() {
                   <select
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-slate-900 bg-white"
                   >
                     <option>Computer Science</option>
                     <option>Electronics</option>
@@ -197,15 +214,15 @@ export default function Courses() {
                     max="6"
                     value={formData.credits}
                     onChange={(e) => setFormData({ ...formData, credits: e.target.value })}
-                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                    className="w-full p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-slate-900"
                   />
                 </div>
               </div>
               <div className="flex justify-end space-x-3 pt-3">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-slate-600">
+                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm bg-slate-900 text-white rounded-xl">
+                <button type="submit" className="px-4 py-2 text-sm bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors cursor-pointer">
                   Save Course
                 </button>
               </div>

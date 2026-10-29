@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,7 +13,7 @@ export default function Login() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   const { login, register, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -30,18 +30,21 @@ export default function Login() {
 
     if (isLogin) {
       const res = await login(formData.email, formData.password);
-      if (res.success) {
+      if (res?.success) {
         navigate('/dashboard');
       } else {
-        setError(res.error);
+        setError(res?.error || 'Login failed. Please try again.');
       }
     } else {
       const res = await register(formData.name, formData.email, formData.password, formData.role);
-      if (res.success) {
-        setSuccess('Account created! Please sign in.');
-        setIsLogin(true);
+      if (res?.success) {
+        setSuccess('Account created! Switching to Sign In...');
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccess('Account created! Please sign in with your credentials.');
+        }, 1500);
       } else {
-        setError(res.error);
+        setError(res?.error || 'Registration failed. Please try again.');
       }
     }
   };
@@ -107,7 +110,7 @@ export default function Login() {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="John Doe"
+                placeholder="Tej Bahadur Bind"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
@@ -164,10 +167,24 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            className="w-full mt-2 bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {isLogin ? <LogIn size={16} /> : <UserPlus size={16} />}
-            {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Connecting to server...</span>
+              </>
+            ) : isLogin ? (
+              <>
+                <LogIn size={16} />
+                <span>Sign In</span>
+              </>
+            ) : (
+              <>
+                <UserPlus size={16} />
+                <span>Create Account</span>
+              </>
+            )}
           </button>
         </form>
       </div>
