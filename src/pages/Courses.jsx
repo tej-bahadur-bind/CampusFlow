@@ -7,8 +7,12 @@ const API_URL = `${API_BASE_URL}/courses`;
 
 export default function Courses() {
   const { user } = useAuth();
-  const userRole = user?.role || 'Admin';
-  const normalizedRole = userRole.toLowerCase();
+  const rawRole = user?.role || 'Student';
+  const normalizedRole = rawRole.toLowerCase();
+
+  const isManagementRole = ['admin', 'teacher', 'faculty'].includes(normalizedRole);
+  const isAdmin = normalizedRole === 'admin';
+  const isStudent = normalizedRole === 'student' || !isManagementRole;
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +27,6 @@ export default function Courses() {
     credits: '3',
   });
 
-  // Helper function to re-fetch data after user actions (submit / delete / enroll)
   const reloadCourses = async () => {
     try {
       const url = user?.id ? `${API_URL}?userId=${user.id}` : API_URL;
@@ -37,7 +40,6 @@ export default function Courses() {
     }
   };
 
-  // Safe initial data fetching inside useEffect with cancellation check
   useEffect(() => {
     let ignore = false;
 
@@ -65,9 +67,11 @@ export default function Courses() {
     };
   }, [user?.id]);
 
-  // Handler for student course enrollment/unenrollment toggle
   const handleEnrollToggle = async (courseId, currentlyEnrolled) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      alert('Please log in again to enroll in courses.');
+      return;
+    }
     setActionLoading(courseId);
 
     const endpoint = currentlyEnrolled ? `${API_URL}/unenroll` : `${API_URL}/enroll`;
@@ -97,12 +101,12 @@ export default function Courses() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-role': userRole,
+          'x-user-role': rawRole,
         },
         body: JSON.stringify({
           ...formData,
           credits: parseInt(formData.credits, 10),
-          userRole,
+          userRole: rawRole,
         }),
       });
 
@@ -121,16 +125,13 @@ export default function Courses() {
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
-        headers: { 'x-user-role': userRole },
+        headers: { 'x-user-role': rawRole },
       });
       if (res.ok) await reloadCourses();
     } catch (err) {
       console.error(err);
     }
   };
-
-  const canAddCourse = ['admin', 'teacher', 'faculty'].includes(normalizedRole);
-  const canDeleteCourse = ['admin'].includes(normalizedRole);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -139,7 +140,7 @@ export default function Courses() {
           <h1 className="text-2xl font-bold text-slate-900">Course & Subject Catalog</h1>
           <p className="text-sm text-slate-500">Manage academic subjects, course codes, and department credits</p>
         </div>
-        {canAddCourse && (
+        {isManagementRole && (
           <button
             onClick={() => {
               setFormData({ course_code: '', title: '', department: 'Computer Science', credits: '3' });
@@ -161,9 +162,12 @@ export default function Courses() {
           <p className="col-span-full text-center py-8 text-slate-500">No courses listed yet.</p>
         ) : (
           courses.map((c) => (
-            <div key={c.id} className={`p-5 rounded-2xl border transition-all bg-white flex flex-col justify-between space-y-4 ${
-              c.is_enrolled ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200 shadow-sm'
-            }`}>
+            <div
+              key={c.id}
+              className={`p-5 rounded-2xl border transition-all bg-white flex flex-col justify-between space-y-4 ${
+                c.is_enrolled ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200 shadow-sm'
+              }`}
+            >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md">
@@ -171,12 +175,12 @@ export default function Courses() {
                   </span>
                   <span className="text-xs text-slate-400 font-medium">{c.credits} Credits</span>
                 </div>
-                <h3 className="font-bold text-slate-900 text-base">{c.title}</h3>
+                <h3 className="font-bold text-slate-900 text-base capitalize">{c.title}</h3>
                 <p className="text-xs text-slate-500">{c.department}</p>
               </div>
 
-              {/* Student Course Selection Toggle */}
-              {normalizedRole === 'student' && (
+              {/* Course Selection Button for Student Accounts */}
+              {isStudent && (
                 <button
                   type="button"
                   disabled={actionLoading === c.id}
@@ -192,7 +196,7 @@ export default function Courses() {
                   ) : c.is_enrolled ? (
                     <>
                       <CheckCircle className="w-4 h-4 text-emerald-600" />
-                      <span>Enrolled (Click to Unenroll)</span>
+                      <span>Enrolled (Click to Leave)</span>
                     </>
                   ) : (
                     <>
@@ -203,9 +207,12 @@ export default function Courses() {
                 </button>
               )}
 
-              {canDeleteCourse && (
+              {isAdmin && (
                 <div className="pt-3 border-t border-slate-100 flex justify-end">
-                  <button onClick={() => handleDelete(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer">
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -275,10 +282,17 @@ export default function Courses() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 pt-3">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 cursor-pointer"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 text-sm bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors cursor-pointer">
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors cursor-pointer"
+                >
                   Save Course
                 </button>
               </div>
