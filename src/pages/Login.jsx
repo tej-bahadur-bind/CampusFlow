@@ -110,7 +110,7 @@ export default function Login() {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Tej Bahadur Bind"
+                placeholder="Enter your name"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
