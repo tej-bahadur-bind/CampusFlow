@@ -25,21 +25,25 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     const normalizedRole = role.toLowerCase();
 
-    // Insert user into users table
+    // 1. Insert user into users table
     const newUser = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
       [name, email, hashedPassword, normalizedRole]
     );
 
-    // Auto-sync student accounts to students roster for analytics tracking
+    // 2. Safely auto-sync student accounts to students roster
     if (normalizedRole === 'student') {
-      const generatedRoll = `CS${Math.floor(1000 + Math.random() * 9000)}`;
-      await db.query(
-        `INSERT INTO students (name, email, roll_number, department, year)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (email) DO NOTHING`,
-        [name, email, generatedRoll, 'Computer Science', '1st Year']
-      );
+      try {
+        const generatedRoll = `CS${Math.floor(10000 + Math.random() * 90000)}`;
+        await db.query(
+          `INSERT INTO students (name, email, roll_number, department, year)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (email) DO NOTHING`,
+          [name, email, generatedRoll, 'Computer Science', '1st Year']
+        );
+      } catch (syncError) {
+        console.error('[Auth Sync Warning] Could not sync student profile:', syncError.message);
+      }
     }
 
     res.status(201).json({
@@ -61,7 +65,6 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    // Find user by email
     const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
       return res.status(400).json({ message: 'Invalid email or password.' });
@@ -69,13 +72,11 @@ router.post('/login', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Check password match
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid email or password.' });
     }
 
-    // Sign JWT Token
     const token = jwt.sign(
       { id: user.id, role: user.role, name: user.name },
       process.env.JWT_SECRET || 'campusflow_jwt_secret_key',
