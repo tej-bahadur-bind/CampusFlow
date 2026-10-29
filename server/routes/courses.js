@@ -1,45 +1,67 @@
 import express from 'express';
 import db from '../db.js';
-import { requireRole } from '../middleware/rbac.js';
 
 const router = express.Router();
 
-// GET all courses
+// Get all courses catalog
 router.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM courses ORDER BY id DESC');
     res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error('Fetch courses error:', err);
+    res.status(500).json({ message: 'Failed to fetch courses' });
   }
 });
 
-// POST add new course (Admin & Teacher only)
-router.post('/', requireRole(['Admin', 'Teacher']), async (req, res) => {
-  const { course_code, title, department, credits } = req.body;
+// Add a new course offering
+router.post('/', async (req, res) => {
+  const { course_code, title, department, credits, userRole } = req.body;
+  const headerRole = req.headers['x-user-role'];
+
+  // Normalize role checking to lowercase
+  const activeRole = (userRole || headerRole || '').toLowerCase();
+  const allowedRoles = ['admin', 'teacher', 'faculty'];
+
+  if (!allowedRoles.includes(activeRole)) {
+    return res.status(403).json({
+      message: 'Access denied. Requires one of the following roles: Admin, Teacher, or Faculty.',
+    });
+  }
+
+  if (!course_code || !title) {
+    return res.status(400).json({ message: 'Course code and title are required fields.' });
+  }
+
   try {
-    const result = await db.query(
-      `INSERT INTO courses (course_code, title, department, credits)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [course_code, title, department, credits || 3]
+    const newCourse = await db.query(
+      'INSERT INTO courses (course_code, title, department, credits) VALUES ($1, $2, $3, $4) RETURNING *',
+      [course_code, title, department || 'Computer Science', parseInt(credits, 10) || 3]
     );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ message: 'Course code already exists.' });
-    }
-    res.status(500).json({ message: error.message });
+
+    res.status(201).json(newCourse.rows[0]);
+  } catch (err) {
+    console.error('Add course error:', err);
+    res.status(500).json({ message: 'Failed to create course', error: err.message });
   }
 });
 
-// DELETE course (Admin only)
-router.delete('/:id', requireRole(['Admin']), async (req, res) => {
-  const { id } = req.params;
+// Delete a course offering
+router.delete('/:id', async (req, res) => {
+  const headerRole = req.headers['x-user-role'];
+  const activeRole = (headerRole || '').toLowerCase();
+  const allowedRoles = ['admin', 'teacher', 'faculty'];
+
+  if (!allowedRoles.includes(activeRole)) {
+    return res.status(403).json({ message: 'Access denied. Only Admins or Faculty can delete courses.' });
+  }
+
   try {
-    await db.query('DELETE FROM courses WHERE id = $1', [id]);
+    await db.query('DELETE FROM courses WHERE id = $1', [req.params.id]);
     res.json({ message: 'Course deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error('Delete course error:', err);
+    res.status(500).json({ message: 'Failed to delete course' });
   }
 });
 
