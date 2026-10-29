@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext(null);
 
@@ -30,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -43,7 +44,12 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.message };
+      return {
+        success: false,
+        error: err.message === 'Failed to fetch'
+          ? 'Cannot connect to server. Render backend may be starting up (wait ~30s).'
+          : err.message,
+      };
     } finally {
       setLoading(false);
     }
@@ -52,7 +58,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password, role) => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role }),
@@ -63,7 +69,12 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.message };
+      return {
+        success: false,
+        error: err.message === 'Failed to fetch'
+          ? 'Cannot connect to server. Render backend may be starting up (wait ~30s).'
+          : err.message,
+      };
     } finally {
       setLoading(false);
     }
