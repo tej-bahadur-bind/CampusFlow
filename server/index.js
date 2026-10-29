@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+import authRoutes from './routes/auth.js';
 import studentRoutes from './routes/students.js';
 import attendanceRoutes from './routes/attendance.js';
 import courseRoutes from './routes/courses.js';
@@ -17,6 +18,7 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/courses', courseRoutes);

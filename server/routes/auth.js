@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
     // Insert user into PostgreSQL
     const newUser = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-      [name, email, hashedPassword, role]
+      [name, email, hashedPassword, role.toLowerCase()]
     );
 
     res.status(201).json({
@@ -35,6 +35,7 @@ router.post('/register', async (req, res) => {
       user: newUser.rows[0],
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error during registration', error: error.message });
   }
 });
@@ -51,21 +52,21 @@ router.post('/login', async (req, res) => {
     // Find user by email
     const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
-      return res.status(400).json({ message: 'Invalid credentials.' });
+      return res.status(400).json({ message: 'Invalid email or password.' });
     }
 
     const user = result.rows[0];
 
-    // Check password
+    // Check password match
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials.' });
+      return res.status(400).json({ message: 'Invalid email or password.' });
     }
 
     // Sign JWT Token
     const token = jwt.sign(
       { id: user.id, role: user.role, name: user.name },
-      process.env.JWT_SECRET || 'secret_key',
+      process.env.JWT_SECRET || 'campusflow_jwt_secret_key',
       { expiresIn: '1d' }
     );
 
@@ -75,6 +76,7 @@ router.post('/login', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login', error: error.message });
   }
 });
