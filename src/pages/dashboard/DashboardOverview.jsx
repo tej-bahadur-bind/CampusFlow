@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, CheckCircle, Clock, AlertTriangle, ArrowRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 
 export default function DashboardOverview() {
   const [summary, setSummary] = useState({
