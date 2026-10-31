@@ -6,8 +6,12 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('campusflow_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('campusflow_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
   const [token, setToken] = useState(() => localStorage.getItem('campusflow_token') || null);
   const [loading, setLoading] = useState(false);
@@ -40,15 +44,20 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Login failed');
 
+      // Immediate synchronous persistence to prevent navigation race conditions
+      localStorage.setItem('campusflow_token', data.token);
+      localStorage.setItem('campusflow_user', JSON.stringify(data.user));
+
       setToken(data.token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err) {
       return {
         success: false,
-        error: err.message === 'Failed to fetch'
-          ? 'Cannot connect to server. Render backend may be starting up (wait ~30s).'
-          : err.message,
+        error:
+          err.message === 'Failed to fetch'
+            ? 'Cannot connect to server. Render backend may be starting up (wait ~30s).'
+            : err.message,
       };
     } finally {
       setLoading(false);
@@ -71,9 +80,10 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       return {
         success: false,
-        error: err.message === 'Failed to fetch'
-          ? 'Cannot connect to server. Render backend may be starting up (wait ~30s).'
-          : err.message,
+        error:
+          err.message === 'Failed to fetch'
+            ? 'Cannot connect to server. Render backend may be starting up (wait ~30s).'
+            : err.message,
       };
     } finally {
       setLoading(false);
