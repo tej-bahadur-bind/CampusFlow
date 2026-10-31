@@ -15,7 +15,6 @@ router.post('/register', async (req, res) => {
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Enforce official college domain restriction
   if (!normalizedEmail.endsWith('@camp.ac.in')) {
     return res.status(400).json({
       message: 'Registration restricted: Please use your official college email ending with @camp.ac.in',
@@ -23,24 +22,20 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    // Check if user already exists
     const userExists = await db.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
     if (userExists.rows.length > 0) {
       return res.status(400).json({ message: 'Email already registered.' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const normalizedRole = role.toLowerCase();
 
-    // 1. Insert user into users table
     const newUser = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
       [name, normalizedEmail, hashedPassword, normalizedRole]
     );
 
-    // 2. Safely auto-sync student accounts to students roster
     if (normalizedRole === 'student') {
       try {
         const generatedRoll = `CS${Math.floor(10000 + Math.random() * 90000)}`;
@@ -102,6 +97,43 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login', error: error.message });
+  }
+});
+
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: 'Email and new password are required.' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail.endsWith('@camp.ac.in')) {
+    return res.status(400).json({
+      message: 'Password reset is restricted to official campus emails (@camp.ac.in).',
+    });
+  }
+
+  try {
+    const userResult = await db.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'No account found registered with this campus email.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await db.query('UPDATE users SET password_hash = $1 WHERE email = $2', [
+      hashedPassword,
+      normalizedEmail,
+    ]);
+
+    res.status(200).json({ message: 'Password reset successfully. Please sign in with your new password.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error during password reset', error: error.message });
   }
 });
 
