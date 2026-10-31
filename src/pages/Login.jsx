@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCap, Lock, Mail, User, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { API_BASE_URL } from '../config';
+import { GraduationCap, Lock, Mail, User, AlertCircle, Loader2, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
-  const [activeTab, setActiveTab] = useState('signin');
+  const [activeTab, setActiveTab] = useState('signin'); // 'signin' | 'register' | 'forgot'
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -14,6 +15,7 @@ export default function Login() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const navigate = useNavigate();
   const { login, register } = useAuth();
@@ -21,6 +23,7 @@ export default function Login() {
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
     setError('');
+    setMessage('');
     setFormData({
       name: '',
       email: '',
@@ -33,18 +36,49 @@ export default function Login() {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError('');
+    if (message) setMessage('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
 
     try {
       const trimmedEmail = formData.email.trim().toLowerCase();
 
-      if (activeTab === 'register') {
-        // Enforce @camp.ac.in domain on registration
+      if (activeTab === 'forgot') {
+        if (!trimmedEmail.endsWith('@camp.ac.in')) {
+          throw new Error('Please enter your official college email ending with @camp.ac.in');
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error('Passwords do not match.');
+        }
+
+        const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: trimmedEmail,
+            newPassword: formData.password,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Password reset failed.');
+
+        setMessage('Password updated successfully! Please sign in with your new password.');
+        setActiveTab('signin');
+        setFormData({
+          name: '',
+          email: trimmedEmail,
+          password: '',
+          confirmPassword: '',
+          role: 'Student',
+        });
+      } else if (activeTab === 'register') {
         if (!trimmedEmail.endsWith('@camp.ac.in')) {
           throw new Error('Only official college emails ending in @camp.ac.in are allowed to register.');
         }
@@ -73,7 +107,7 @@ export default function Login() {
         });
 
         setActiveTab('signin');
-        setError('Account created successfully! Please sign in.');
+        setMessage('Account created successfully! Please sign in.');
       } else {
         const result = await login(trimmedEmail, formData.password);
 
@@ -103,35 +137,56 @@ export default function Login() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-100 p-1 rounded-2xl">
-          <button
-            type="button"
-            onClick={() => handleTabSwitch('signin')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'signin'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabSwitch('register')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'register'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+        {activeTab !== 'forgot' ? (
+          <div className="flex bg-slate-100 p-1 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => handleTabSwitch('signin')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'signin'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabSwitch('register')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'register'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <button
+              type="button"
+              onClick={() => handleTabSwitch('signin')}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Sign In</span>
+            </button>
+            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">Reset Password</span>
+          </div>
+        )}
 
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-600">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {message && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs text-emerald-700">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span>{message}</span>
           </div>
         )}
 
@@ -171,7 +226,7 @@ export default function Login() {
                 className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
               />
             </div>
-            {activeTab === 'register' && (
+            {activeTab !== 'signin' && (
               <p className="text-[11px] text-slate-400 mt-1">
                 Must be an official college address ending in <strong>@camp.ac.in</strong>
               </p>
@@ -179,7 +234,20 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-600 uppercase">
+                {activeTab === 'forgot' ? 'New Password' : 'Password'}
+              </label>
+              {activeTab === 'signin' && (
+                <button
+                  type="button"
+                  onClick={() => handleTabSwitch('forgot')}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
               <input
@@ -195,42 +263,44 @@ export default function Login() {
             </div>
           </div>
 
-          {activeTab === 'register' && (
-            <>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    required
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    autoComplete="new-password"
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
-                  />
-                </div>
+          {(activeTab === 'register' || activeTab === 'forgot') && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase">
+                {activeTab === 'forgot' ? 'Confirm New Password' : 'Confirm Password'}
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  required
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+                />
               </div>
+            </div>
+          )}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase">Role</label>
-                <div className="relative">
-                  <ShieldCheck className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600 bg-white"
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
+          {activeTab === 'register' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase">Role</label>
+              <div className="relative">
+                <ShieldCheck className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600 bg-white"
+                >
+                  <option value="Student">Student</option>
+                  <option value="Teacher">Teacher</option>
+                  <option value="Admin">Admin</option>
+                </select>
               </div>
-            </>
+            </div>
           )}
 
           <button
@@ -245,6 +315,11 @@ export default function Login() {
               </>
             ) : activeTab === 'signin' ? (
               'Sign In to Dashboard'
+            ) : activeTab === 'forgot' ? (
+              <>
+                <KeyRound className="w-4 h-4" />
+                <span>Reset Password</span>
+              </>
             ) : (
               'Register Account'
             )}
