@@ -49,10 +49,6 @@ export default function Login() {
       const trimmedEmail = formData.email.trim().toLowerCase();
 
       if (activeTab === 'forgot') {
-        if (!trimmedEmail.endsWith('@camp.ac.in')) {
-          throw new Error('Please enter your official college email ending with @camp.ac.in');
-        }
-
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Passwords do not match.');
         }
