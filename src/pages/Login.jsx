@@ -41,14 +41,21 @@ export default function Login() {
     setLoading(true);
 
     try {
+      const trimmedEmail = formData.email.trim().toLowerCase();
+
       if (activeTab === 'register') {
+        // Enforce @camp.ac.in domain on registration
+        if (!trimmedEmail.endsWith('@camp.ac.in')) {
+          throw new Error('Only official college emails ending in @camp.ac.in are allowed to register.');
+        }
+
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Passwords do not match.');
         }
 
         const result = await register(
           formData.name,
-          formData.email,
+          trimmedEmail,
           formData.password,
           formData.role
         );
@@ -59,7 +66,7 @@ export default function Login() {
 
         setFormData({
           name: '',
-          email: formData.email,
+          email: trimmedEmail,
           password: '',
           confirmPassword: '',
           role: 'Student',
@@ -68,10 +75,7 @@ export default function Login() {
         setActiveTab('signin');
         setError('Account created successfully! Please sign in.');
       } else {
-        const result = await login(
-          formData.email,
-          formData.password
-        );
+        const result = await login(trimmedEmail, formData.password);
 
         if (!result?.success) {
           throw new Error(result?.error || 'Login failed.');
@@ -160,13 +164,18 @@ export default function Login() {
                 type="email"
                 name="email"
                 required
-                placeholder="student@campus.edu"
+                placeholder="student@camp.ac.in"
                 value={formData.email}
                 onChange={handleChange}
                 autoComplete={activeTab === 'signin' ? 'username' : 'off'}
                 className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-blue-600"
               />
             </div>
+            {activeTab === 'register' && (
+              <p className="text-[11px] text-slate-400 mt-1">
+                Must be an official college address ending in <strong>@camp.ac.in</strong>
+              </p>
+            )}
           </div>
 
           <div>

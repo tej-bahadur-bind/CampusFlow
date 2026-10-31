@@ -13,9 +13,18 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Enforce official college domain restriction
+  if (!normalizedEmail.endsWith('@camp.ac.in')) {
+    return res.status(400).json({
+      message: 'Registration restricted: Please use your official college email ending with @camp.ac.in',
+    });
+  }
+
   try {
     // Check if user already exists
-    const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const userExists = await db.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
     if (userExists.rows.length > 0) {
       return res.status(400).json({ message: 'Email already registered.' });
     }
@@ -28,7 +37,7 @@ router.post('/register', async (req, res) => {
     // 1. Insert user into users table
     const newUser = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
-      [name, email, hashedPassword, normalizedRole]
+      [name, normalizedEmail, hashedPassword, normalizedRole]
     );
 
     // 2. Safely auto-sync student accounts to students roster
@@ -39,7 +48,7 @@ router.post('/register', async (req, res) => {
           `INSERT INTO students (name, email, roll_number, department, year)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (email) DO NOTHING`,
-          [name, email, generatedRoll, 'Computer Science', '1st Year']
+          [name, normalizedEmail, generatedRoll, 'Computer Science', '1st Year']
         );
       } catch (syncError) {
         console.error('[Auth Sync Warning] Could not sync student profile:', syncError.message);
@@ -64,8 +73,10 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ message: 'Email and password are required.' });
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   try {
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
       return res.status(400).json({ message: 'Invalid email or password.' });
     }
