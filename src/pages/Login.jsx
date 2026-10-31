@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config';
 import { GraduationCap, Lock, Mail, User, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
-  const [activeTab, setActiveTab] = useState('signin'); // 'signin' | 'register'
+  const [activeTab, setActiveTab] = useState('signin');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,9 +16,8 @@ export default function Login() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, register } = useAuth();
 
-  // Reset form fields cleanly when switching tabs
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
     setError('');
@@ -48,43 +46,37 @@ export default function Login() {
           throw new Error('Passwords do not match.');
         }
 
-        const res = await fetch(`${API_BASE_URL}/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-            role: formData.role,
-          }),
-        });
+        const result = await register(
+          formData.name,
+          formData.email,
+          formData.password,
+          formData.role
+        );
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Registration failed.');
-
-        // Automatically log in or switch to sign in
-        if (data.user && data.token) {
-          login(data.user, data.token);
-          navigate('/dashboard');
-        } else {
-          setActiveTab('signin');
-          setError('Account created! Please sign in with your credentials.');
+        if (!result?.success) {
+          throw new Error(result?.error || 'Registration failed.');
         }
-      } else {
-        // Sign In Flow
-        const res = await fetch(`${API_BASE_URL}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
+
+        setFormData({
+          name: '',
+          email: formData.email,
+          password: '',
+          confirmPassword: '',
+          role: 'Student',
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Invalid email or password.');
+        setActiveTab('signin');
+        setError('Account created successfully! Please sign in.');
+      } else {
+        const result = await login(
+          formData.email,
+          formData.password
+        );
 
-        login(data.user, data.token);
+        if (!result?.success) {
+          throw new Error(result?.error || 'Login failed.');
+        }
+
         navigate('/dashboard');
       }
     } catch (err) {
