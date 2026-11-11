@@ -9,6 +9,7 @@ import DashboardOverview from './pages/dashboard/DashboardOverview';
 import Students from './pages/Students';
 import Attendance from './pages/Attendance';
 import Courses from './pages/Courses';
+import ResultsManagement from './pages/dashboard/ResultsManagement';
 import StudentPortal from './pages/StudentPortal';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="students" element={<Students />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="courses" element={<Courses />} />
+              <Route path="results" element={<ResultsManagement />} />
               <Route path="my-portal" element={<StudentPortal />} />
             </Route>
           </Route>

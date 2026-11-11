@@ -5,7 +5,7 @@ import db from '../db.js';
 
 const router = express.Router();
 
-// Register New User
+// Register New User (Restricted exclusively to @camp.ac.in)
 router.post('/register', async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -15,6 +15,7 @@ router.post('/register', async (req, res) => {
 
   const normalizedEmail = email.trim().toLowerCase();
 
+  // Enforce official college domain on NEW account creation
   if (!normalizedEmail.endsWith('@camp.ac.in')) {
     return res.status(400).json({
       message: 'Registration restricted: Please use your official college email ending with @camp.ac.in',
@@ -60,7 +61,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login User
+// Login User (Authenticates any valid registered email in DB)
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -110,16 +111,10 @@ router.post('/reset-password', async (req, res) => {
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  if (!normalizedEmail.endsWith('@camp.ac.in')) {
-    return res.status(400).json({
-      message: 'Password reset is restricted to official campus emails (@camp.ac.in).',
-    });
-  }
-
   try {
     const userResult = await db.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: 'No account found registered with this campus email.' });
+      return res.status(404).json({ message: 'No account found registered with this email address.' });
     }
 
     const salt = await bcrypt.genSalt(10);
